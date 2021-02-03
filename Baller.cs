@@ -20,10 +20,10 @@ namespace Baller
 
         private void Start()
         {
-            balls[0] = new Ball(BallType.REGULAR);
-            balls[1] = new Ball(BallType.GRAVITY);
-            balls[2] = new Ball(BallType.BIG);
-            balls[3] = new Ball(BallType.BEACH);
+            balls[0] = new Ball(BallType.REGULAR, "regular");
+            balls[1] = new Ball(BallType.GRAVITY, "gravity");
+            balls[2] = new Ball(BallType.BIG, "big");
+            balls[3] = new Ball(BallType.BEACH, "beach");
 
             balls[4] = new Ball(BallType.REGULAR, "candy/regular");
             balls[5] = new Ball(BallType.REGULAR, "candy/strait");
@@ -71,7 +71,7 @@ namespace Baller
                                     smr.material.mainTexture = ball.tex;
                                 }
 
-                                if (ball.mesh != null && smr.name.Contains("ballMesh")) smr.sharedMesh = ball.mesh;
+                                if (ball.mesh != null && (smr.name.Contains("ballMesh") || smr.name.Contains("lightEffect"))) smr.sharedMesh = ball.mesh;
                             }
 
 
@@ -118,23 +118,8 @@ namespace Baller
 
             public Ball(BallType _type, string _identifier = "")
             {
+                identifier = _identifier;
                 type = _type;
-                switch (type)
-                {
-                    case BallType.REGULAR:
-                        if (identifier != "") identifier = _identifier;
-                        else identifier = "regular";
-                        break;
-                    case BallType.GRAVITY:
-                        identifier = "gravity";
-                        break;
-                    case BallType.BIG:
-                        identifier = "big";
-                        break;
-                    case BallType.BEACH:
-                        identifier = "beach";
-                        break;
-                }
             }
         }
     }
