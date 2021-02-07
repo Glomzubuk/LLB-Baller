@@ -1,10 +1,6 @@
 ﻿using UnityEngine;
-using System.IO;
 using LLHandlers;
 using GameplayEntities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Baller
 {
@@ -14,12 +10,11 @@ namespace Baller
         public static Baller Instance { get { return instance; } }
         public static void Initialize() { GameObject gameObject = new GameObject("Baller"); Baller modLoader = gameObject.AddComponent<Baller>(); DontDestroyOnLoad(gameObject); instance = modLoader; }
 
-        private const string modVersion = "v1.1";
+        private const string modVersion = "v1.2";
         private string resourceFolder = (Application.dataPath + "/Managed/BallerResources");
 
         private Shader transparentShader = null;
         public Ball[] balls = new Ball[9];
-        private Font elements = null;
 
 
         private void Start()
@@ -46,10 +41,6 @@ namespace Baller
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.P))
-            {
-                BundledAssetLoader.LogAllAssetsInBundle("characters/boss");
-            }
             if (!transparentShader) transparentShader = BundledAssetLoader.GetShader(ShaderType.Transparent);
 
             if (BallHandler.instance != null)
@@ -73,6 +64,7 @@ namespace Baller
                                 }
                             }
 
+                            //Candyballs
                             if (ball.identifier.Contains("candy") && (ball.mesh != null || ball.tex != null))
                             {
                                 if (ball.tex != null && (!smr.name.Contains("Outline")))
@@ -88,7 +80,7 @@ namespace Baller
                                 else if (ball.mesh != null && ball.identifier.Contains("regular") && (!smr.name.Contains("Strait") && !smr.name.Contains("Saturn") && smr.name.Contains("mesh001"))) smr.sharedMesh = ball.mesh;
                             }
 
-
+                            //Nitro hook
                             if (ball.identifier.Contains("nitro") && (ball.mesh != null || ball.tex != null))
                             {
                                 if (ball.tex != null && (!smr.name.Contains("Outline")))
@@ -120,6 +112,7 @@ namespace Baller
             }
         }
 
+        
         private void ApplyTexture(SkinnedMeshRenderer _smr, Texture2D _tex)
         {
             _smr.material.SetColor("_LitColor", Color.white);
