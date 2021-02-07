@@ -258,6 +258,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Baller.cs" />
+    <Compile Include="BundledAssetLoader.cs" />
     <Compile Include="DDSLoader.cs" />
     <Compile Include="FastObjImporter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
