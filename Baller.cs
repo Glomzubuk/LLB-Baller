@@ -1,21 +1,33 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEngine;
+using BepInEx;
 using LLHandlers;
 using GameplayEntities;
+using LLBML.Utils;
+using LLBML.Texture;
 
 namespace Baller
 {
-    public class Baller : MonoBehaviour
+    [BepInPlugin(PluginInfos.PLUGIN_ID, PluginInfos.PLUGIN_NAME, PluginInfos.PLUGIN_VERSION)]
+    [BepInProcess("LLBlaze.exe")]
+    [BepInDependency(LLBML.PluginInfos.PLUGIN_ID, BepInDependency.DependencyFlags.HardDependency)]
+    public class Baller : BaseUnityPlugin
     {
-        private static Baller instance = null;
-        public static Baller Instance { get { return instance; } }
-        public static void Initialize() { GameObject gameObject = new GameObject("Baller"); Baller modLoader = gameObject.AddComponent<Baller>(); DontDestroyOnLoad(gameObject); instance = modLoader; }
+        public static Baller Instance;
 
-        private const string modVersion = "v1.2";
-        private string resourceFolder = (Application.dataPath + "/Managed/BallerResources");
+        public static DirectoryInfo ResourceFolder;
 
         private Shader transparentShader = null;
         public Ball[] balls = new Ball[9];
 
+        private void Awake()
+        {
+            Instance = this;
+            ResourceFolder = ModdingFolder.GetModSubFolder(this.Info);
+        }
 
         private void Start()
         {
@@ -33,19 +45,24 @@ namespace Baller
 
             foreach (Ball ball in balls)
             {
-                ball.mesh = FastObjImporter.Instance.ImportFile(resourceFolder + "/" + ball.identifier);
-                ball.tex = TextureHelper.LoadTexture(resourceFolder + "/" + ball.identifier);
-            }
+                ball.mesh = FastObjImporter.Instance.ImportFile(ball.ballResourcesFolder.FullName);
 
+                FileInfo texture = ball.ballResourcesFolder
+                    .GetFiles()
+                    .Where(file => file.Extension.ToLower() == ".png" || file.Extension.ToLower() == ".dds")
+                    .OrderBy(_ => UnityEngine.Random.value)
+                    .FirstOrDefault();
+                
+                ball.tex = texture != null ? TextureUtils.LoadTexture(texture) : null;
+            }
         }
 
         private void Update()
         {
             if (!transparentShader) transparentShader = BundledAssetLoader.GetShader(ShaderType.Transparent);
 
-            if (BallHandler.instance != null)
+            if (BallHandler.instance?.GetBall(0) is BallEntity ballEntity)
             {
-                BallEntity ballEntity = BallHandler.instance.GetBall(0);
                 SkinnedMeshRenderer[] smrs = ballEntity.gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
                 if (smrs.Length > 0)
                 {
@@ -56,10 +73,17 @@ namespace Baller
                             //Regular, Beach, Big and Gravity
                             if (ballEntity.ballType == ball.type && (ball.mesh != null || ball.tex != null) && !ball.identifier.Contains("candy") && !ball.identifier.Contains("nitro"))
                             {
-                                if ((smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer") && ball.tex != null) ApplyTexture(smr, ball.tex);
+                                if ((smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer") && ball.tex != null)
+                                {
+                                    ApplyTexture(smr, ball.tex);
+                                }
 
-                                if (ball.mesh != null && (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer" || smr.name.ToLower().Contains("outline"))) smr.sharedMesh = ball.mesh;
-                                else {
+                                if (ball.mesh != null && (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer" || smr.name.ToLower().Contains("outline")))
+                                {
+                                    smr.sharedMesh = ball.mesh;
+                                }
+                                else
+                                {
                                     if (ball.mesh != null) smr.sharedMesh = null;
                                 }
                             }
@@ -102,12 +126,14 @@ namespace Baller
         {
             public BallType type;
             public string identifier;
+            public DirectoryInfo ballResourcesFolder;
             public Mesh mesh;
             public Texture2D tex;
 
             public Ball(BallType _type, string _identifier = "")
             {
                 identifier = _identifier;
+                ballResourcesFolder = Directory.CreateDirectory(Path.Combine(ResourceFolder.FullName, _identifier));
                 type = _type;
             }
         }

@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using LLHandlers;
 
 namespace Baller
 {
-    public class BundledAssetLoader
+    public static class BundledAssetLoader
     {
 
         public static UnityEngine.Object GetAsset(string _bundleName, string _assetName)
