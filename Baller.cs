@@ -21,7 +21,7 @@ namespace Baller
         public static DirectoryInfo ResourceFolder;
 
         private Shader transparentShader = null;
-        public Ball[] balls = new Ball[9];
+        public Ball[] balls = new Ball[10];
 
         private void Awake()
         {
@@ -42,18 +42,23 @@ namespace Baller
 
             balls[7] = new Ball(BallType.REGULAR, "nitro/regular");
             balls[8] = new Ball(BallType.REGULAR, "nitro/detective");
+            balls[9] = new Ball(BallType.REGULAR, "nitro/lucha");
 
             foreach (Ball ball in balls)
             {
-                ball.mesh = FastObjImporter.Instance.ImportFile(ball.ballResourcesFolder.FullName);
+                FileInfo meshFile = ball.ballResourcesFolder
+                    .GetFiles()
+                    .Where(file => file.Extension.ToLower() == ".obj")
+                    .FirstOrDefault();
+                ball.mesh = meshFile != default(FileInfo) ? FastObjImporter.Instance.ImportFile(meshFile.FullName) : null;
 
-                FileInfo texture = ball.ballResourcesFolder
+                FileInfo texFile = ball.ballResourcesFolder
                     .GetFiles()
                     .Where(file => file.Extension.ToLower() == ".png" || file.Extension.ToLower() == ".dds")
                     .OrderBy(_ => UnityEngine.Random.value)
                     .FirstOrDefault();
-                
-                ball.tex = texture != null ? TextureUtils.LoadTexture(texture) : null;
+
+                ball.tex = texFile != null ? TextureUtils.LoadTexture(texFile) : null;
             }
         }
 
@@ -61,64 +66,109 @@ namespace Baller
         {
             if (!transparentShader) transparentShader = BundledAssetLoader.GetShader(ShaderType.Transparent);
 
-            if (BallHandler.instance?.GetBall(0) is BallEntity ballEntity)
+            if (LLBML.States.GameStates.IsInMatch() && BallHandler.instance?.GetBall(0) is BallEntity ballEntity)
             {
-                SkinnedMeshRenderer[] smrs = ballEntity.gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
-                if (smrs.Length > 0)
+                SkinnedMeshRenderer[] smrs = ballEntity?.gameObject?.GetComponentsInChildren<SkinnedMeshRenderer>();
+                foreach (SkinnedMeshRenderer smr in smrs)
                 {
-                    foreach (SkinnedMeshRenderer smr in smrs)
+                    foreach (Ball ball in balls)
                     {
-                        foreach (Ball ball in balls)
+                        string[] id = ball.identifier.Split('/');
+
+                        switch (id[0])
                         {
-                            //Regular, Beach, Big and Gravity
-                            if (ballEntity.ballType == ball.type && (ball.mesh != null || ball.tex != null) && !ball.identifier.Contains("candy") && !ball.identifier.Contains("nitro"))
-                            {
-                                if ((smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer") && ball.tex != null)
-                                {
-                                    ApplyTexture(smr, ball.tex);
-                                }
+                            case "regular":
+                            case "gravity":
+                            case "big":
+                            case "beach":
+                                ApplyNormal(smr, ball); break;
+                            case "candy":
+                                ApplyCandy(smr, ball, id[1]); break;
+                            case "nitro":
+                                ApplyNitro(smr, ball, id[1]); break;
 
-                                if (ball.mesh != null && (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer" || smr.name.ToLower().Contains("outline")))
-                                {
-                                    smr.sharedMesh = ball.mesh;
-                                }
-                                else
-                                {
-                                    if (ball.mesh != null) smr.sharedMesh = null;
-                                }
-                            }
-
-                            //Candyballs
-                            if (ball.identifier.Contains("candy") && (ball.mesh != null || ball.tex != null))
-                            {
-                                if (ball.tex != null && (!smr.name.Contains("Outline")))
-                                {
-                                    smr.material.SetColor("_LitColor", Color.white);
-                                    if (ball.tex != null && ball.identifier.Contains("strait") && smr.name.Contains("Strait")) ApplyTexture(smr, ball.tex);
-                                    else if (ball.tex != null && ball.identifier.Contains("saturn") && smr.name.Contains("Saturn")) ApplyTexture(smr, ball.tex);
-                                    else if (ball.tex != null && ball.identifier.Contains("regular") && (!smr.name.Contains("Strait") && !smr.name.Contains("Saturn") && smr.name.Contains("mesh001"))) ApplyTexture(smr, ball.tex);
-                                }
-
-                                if (ball.mesh != null && ball.identifier.Contains("strait") && smr.name.Contains("Strait")) smr.sharedMesh = ball.mesh;
-                                else if (ball.mesh != null && ball.identifier.Contains("saturn") && smr.name.Contains("Saturn")) smr.sharedMesh = ball.mesh;
-                                else if (ball.mesh != null && ball.identifier.Contains("regular") && (!smr.name.Contains("Strait") && !smr.name.Contains("Saturn") && smr.name.Contains("mesh001"))) smr.sharedMesh = ball.mesh;
-                            }
-
-                            //Nitro hook
-                            if (ball.identifier.Contains("nitro") && (ball.mesh != null || ball.tex != null))
-                            {
-                                if (ball.tex != null && (!smr.name.Contains("Outline")))
-                                {
-                                    if (ball.tex != null && ball.identifier.Contains("detective") && smr.name.Contains("Detective")) ApplyTexture(smr, ball.tex);
-                                    else if (ball.tex != null && ball.identifier.Contains("regular") && (!smr.name.Contains("Detective") && smr.name.Contains("cuff"))) ApplyTexture(smr, ball.tex);
-                                }
-
-                                if (ball.mesh != null && ball.identifier.Contains("detective") && smr.name.Contains("Detective")) smr.sharedMesh = ball.mesh;
-                                else if (ball.mesh != null && ball.identifier.Contains("regular") && (!smr.name.Contains("Detective") && smr.name.Contains("cuff"))) smr.sharedMesh = ball.mesh;
-                            }
                         }
                     }
                 }
+            }
+        }
+
+        public void ApplyNormal(SkinnedMeshRenderer smr, Ball ball)
+        {
+            if (ball.tex != null && (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer"))
+            {
+                ApplyTexture(smr, ball.tex);
+            }
+            if (ball.mesh != null) {
+                if (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer" || smr.name.ToLower().Contains("outline"))
+                {
+                    smr.sharedMesh = ball.mesh;
+                }
+                else
+                {
+                    smr.sharedMesh = null;
+                }
+            }
+        }
+
+        public void ApplyCandy (SkinnedMeshRenderer smr, Ball ball, string type)
+        {
+            if (ball.tex != null && (!smr.name.Contains("Outline")))
+            {
+                smr.material.SetColor("_LitColor", Color.white);
+            }
+
+            switch (type)
+            {
+                case "strait":
+                    if (smr.name.Contains("Strait"))
+                    {
+                        if (ball.tex != null && (!smr.name.Contains("Outline"))) ApplyTexture(smr, ball.tex);
+                        if (ball.mesh != null) smr.sharedMesh = ball.mesh;
+                    }
+                    break;
+                case "saturn":
+                    if (smr.name.Contains("Saturn"))
+                    {
+                        if (ball.tex != null && (!smr.name.Contains("Outline"))) ApplyTexture(smr, ball.tex);
+                        if (ball.mesh != null) smr.sharedMesh = ball.mesh;
+                    }
+                    break;
+                case "regular":
+                    if (smr.name.Contains("mesh001") && !smr.name.Contains("Strait") && !smr.name.Contains("Saturn"))
+                    {
+                        if (ball.tex != null && (!smr.name.Contains("Outline"))) ApplyTexture(smr, ball.tex);
+                        if (ball.mesh != null) smr.sharedMesh = ball.mesh;
+                    }
+                    break;
+            }
+        }
+
+        public void ApplyNitro (SkinnedMeshRenderer smr, Ball ball, string type)
+        {
+            switch (type)
+            {
+                case "detective":
+                    if (smr.name.Contains("Detective"))
+                    {
+                        if (ball.tex != null && (!smr.name.Contains("Outline"))) ApplyTexture(smr, ball.tex);
+                        if (ball.mesh != null) smr.sharedMesh = ball.mesh;
+                    }
+                    break;
+                case "lucha":
+                    if (smr.name.Contains("Lucha"))
+                    {
+                        if (ball.tex != null && (!smr.name.Contains("Outline"))) ApplyTexture(smr, ball.tex);
+                        if (ball.mesh != null) smr.sharedMesh = ball.mesh;
+                    }
+                    break;
+                case "regular":
+                    if (smr.name.Contains("cuff") && !smr.name.Contains("Detective") && !smr.name.Contains("Luchador"))
+                    {
+                        if (ball.tex != null && (!smr.name.Contains("Outline"))) ApplyTexture(smr, ball.tex);
+                        if (ball.mesh != null) smr.sharedMesh = ball.mesh;
+                    }
+                    break;
             }
         }
 
@@ -138,7 +188,6 @@ namespace Baller
             }
         }
 
-        
         private void ApplyTexture(SkinnedMeshRenderer _smr, Texture2D _tex)
         {
             _smr.material.SetColor("_LitColor", Color.white);

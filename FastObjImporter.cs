@@ -33,18 +33,8 @@ namespace Baller
         private static readonly float[] pow10 = GenerateLookupTable();
 
         // Use this for initialization
-        public Mesh ImportFile(string folderPath)
+        public Mesh ImportFile(string filePath)
         {
-            string filePath = null;
-            if (Directory.Exists(folderPath))
-            {
-                if (Directory.GetFiles(folderPath).Length > 0)
-                {
-                    foreach (var path in Directory.GetFiles(folderPath)) if (path.ToLower().EndsWith(".obj")) filePath = path;
-                }
-            }
-            if (filePath == null) return null;
-
             triangles = new List<int>();
             vertices = new List<Vector3>();
             uv = new List<Vector2>();
