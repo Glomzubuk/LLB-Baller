@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using BepInEx;
+using BepInEx.Configuration;
 using LLHandlers;
 using GameplayEntities;
 using LLBML.Utils;
@@ -21,16 +22,20 @@ namespace Baller
         public static DirectoryInfo ResourceFolder;
 
         private Shader transparentShader = null;
+        private ConfigEntry<bool> regularBallFallback;
         public Ball[] balls = new Ball[10];
 
         private void Awake()
         {
             Instance = this;
             ResourceFolder = ModdingFolder.GetModSubFolder(this.Info);
+            regularBallFallback = Config.Bind("Toggles", "RegularBallFallback", true);
         }
 
         private void Start()
         {
+            ModDependenciesUtils.RegisterToModMenu(this.Info);
+
             balls[0] = new Ball(BallType.REGULAR, "regular");
             balls[1] = new Ball(BallType.GRAVITY, "gravity");
             balls[2] = new Ball(BallType.BIG, "big");
