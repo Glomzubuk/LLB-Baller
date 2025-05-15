@@ -53,9 +53,8 @@ namespace Baller
             {
                 FileInfo meshFile = ball.ballResourcesFolder
                     .GetFiles()
-                    .Where(file => file.Extension.ToLower() == ".obj")
-                    .FirstOrDefault();
-                ball.mesh = meshFile != default(FileInfo) ? FastObjImporter.Instance.ImportFile(meshFile.FullName) : null;
+                    .FirstOrDefault(file => file.Extension.ToLower() == ".obj");
+                ball.mesh = meshFile != null ? FastObjImporter.Instance.ImportFile(meshFile.FullName) : null;
 
                 FileInfo texFile = ball.ballResourcesFolder
                     .GetFiles()
@@ -86,7 +85,8 @@ namespace Baller
                             case "gravity":
                             case "big":
                             case "beach":
-                                ApplyNormal(smr, ball); break;
+                                if (ballEntity.ballType == ball.type) ApplyNormal(smr, ball);
+                                break;
                             case "candy":
                                 ApplyCandy(smr, ball, id[1]); break;
                             case "nitro":
@@ -100,14 +100,20 @@ namespace Baller
 
         public void ApplyNormal(SkinnedMeshRenderer smr, Ball ball)
         {
-            if (ball.tex != null && (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer"))
+            string parentName = smr.transform.parent.name.ToLower();
+            if (parentName.Contains("candy") || parentName.Contains("cuff")) return;
+
+            var texture = regularBallFallback.Value && ball.tex is null ? balls[0].tex : ball.tex;
+            var mesh = regularBallFallback.Value && ball.mesh is null ? balls[0].mesh : ball.mesh;
+
+            if (texture != null && (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer"))
             {
-                ApplyTexture(smr, ball.tex);
+                ApplyTexture(smr, texture);
             }
-            if (ball.mesh != null) {
+            if (mesh != null) {
                 if (smr.name == "ballMesh_MainRenderer" || smr.name == "ballMesh002_MainRenderer" || smr.name.ToLower().Contains("outline"))
                 {
-                    smr.sharedMesh = ball.mesh;
+                    smr.sharedMesh = mesh;
                 }
                 else
                 {
